@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { askClaude }       from "../constants/api";
+import { askGemini }       from "../constants/api";
 import { buildSystemPrompt } from "../constants/prompts";
 import { colors }           from "../constants/styles";
 import QuickQuery           from "./QuickQuery";
@@ -34,7 +34,7 @@ export default function ChatWindow({ farmProfile }) {
 
     try {
       const systemPrompt = buildSystemPrompt(farmProfile);
-      const reply = await askClaude(updated, systemPrompt);
+      const reply = await askGemini(updated, systemPrompt);
       setMessages([...updated, { role: "assistant", content: reply }]);
     } catch (err) {
       setError(err.message || "Connection error. Please try again.");

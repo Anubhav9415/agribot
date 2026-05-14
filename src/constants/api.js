@@ -1,26 +1,50 @@
-// ─── Anthropic API Helper ─────────────────────────────────────────────────────
-// Centralises all fetch logic so components never call fetch() directly.
+// ─── Gemini API Helper ─────────────────────────────────────────────────────
 
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const MODEL             = "claude-sonnet-4-20250514";
-const MAX_TOKENS        = 1000;
+const GEMINI_API_URL =
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+
+// 🔑 API KEY
+const API_KEY =
+  process.env.REACT_APP_GEMINI_API_KEY ||
+  "AIzaSyC38AcMMn04uzxm3NmE2xbEErDxt8UtiiI";
 
 /**
- * Send a conversation to the Claude API and return the assistant's reply.
+ * Send conversation to Gemini and return reply
  *
- * @param {Array<{role: string, content: string}>} messages  Full conversation history
- * @param {string} systemPrompt  System prompt (may include farm-profile context)
- * @returns {Promise<string>}  Assistant reply text
+ * @param {Array<{role: string, content: string}>} messages
+ * @param {string} systemPrompt
  */
-export async function askClaude(messages, systemPrompt) {
-  const response = await fetch(ANTHROPIC_API_URL, {
+export async function askGemini(messages, systemPrompt) {
+  if (!API_KEY || API_KEY === "YOUR_GEMINI_API_KEY") {
+    throw new Error(
+      "API key missing. Set REACT_APP_GEMINI_API_KEY in .env file."
+    );
+  }
+
+  // Convert messages into Gemini format
+  const formattedMessages = messages.map((msg) => ({
+    role: msg.role === "assistant" ? "model" : "user",
+    parts: [{ text: msg.content }],
+  }));
+
+  const response = await fetch(GEMINI_API_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": API_KEY,
+    },
     body: JSON.stringify({
-      model:      MODEL,
-      max_tokens: MAX_TOKENS,
-      system:     systemPrompt,
-      messages,
+      contents: [
+        {
+          parts: [
+            {
+              text: `${systemPrompt}\n\n${formattedMessages
+                .map((m) => m.parts[0].text)
+                .join("\n")}`,
+            },
+          ],
+        },
+      ],
     }),
   });
 
@@ -30,5 +54,9 @@ export async function askClaude(messages, systemPrompt) {
   }
 
   const data = await response.json();
-  return data.content?.[0]?.text ?? "Sorry, I could not process that. Please try again.";
+
+  return (
+    data.candidates?.[0]?.content?.parts?.[0]?.text ||
+    "Sorry, I could not process that."
+  );
 }
